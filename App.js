@@ -1,177 +1,71 @@
-/**
- * Sample React Native App
- * https://github.com/facebook/react-native
- *
- * @format
- * @flow
- */
-
-import React, { Fragment } from "react";
+import React from "react";
 import axios from "axios";
-import {
-  SafeAreaView,
-  StyleSheet,
-  ScrollView,
-  StatusBar,
-  TextInput,
-  Text,
-  View,
-  Picker,
-  TouchableOpacity
-} from "react-native";
+import { View, StyleSheet } from "react-native";
 
-const search = (searchBy, text) => {
-  const URL = "https://api.github.com/search";
-  if (byRepo) {
-    return axios.get(`${URL}/${searchBy}?q=${text}`);
-  }
-  if (byUser) {
-    return axios.get(`${URL}/users?q=${text}`);
-  }
-  if (byIssues) {
-    return axios.get(`${URL}/issues?q=${text}`);
-  }
-};
+import { defaultSelectedType, searchUrl } from "./src/constants";
+
+import Header from "./src/components/Header";
+import SearchBlock from "./src/components/Search/SearchBlock";
+import SearchTypePicker from "./src/components/Search/SearchTypePicker";
+import SelectedInfo from "./src/components/SelectedInfo";
+import SearchResults from "./src/components/Search/SearchResults";
+
+import { colors } from "./src/themes";
 
 class App extends React.Component {
-  state = {};
+  state = {
+    searchBy: defaultSelectedType,
+    results: null,
+    selected: null,
+  };
 
-  onChangeText = text => {
-    const { searchBy } = this.state;
-    return search(searchBy, text)
-      .then(res => {
-        this.setState({ results: res.data.items });
-        // this.forceUpdate();
-      })
+  search = (searchBy, text) => axios.get(`${searchUrl}/${searchBy}?q=${text}`);
+
+  onChangeText = text =>
+    this.search(this.state.searchBy, text)
+      .then(res => this.setState({ results: res.data.items }))
       .catch(err => console.log({ err }));
-  };
 
-  onPickerValueChange = itemValue => {
-    this.setState({ searchBy: itemValue });
-    this.forceUpdate();
-  };
+  onPickerValueChange = itemValue => this.setState({ searchBy: itemValue });
 
-  onButtonPress = () => {
-    delete this.state.selected;
-    this.setState({ changed: !this.state.changed });
+  onResultPress = item => this.setState({ selected: item });
+
+  onButtonPress = () => this.setState({ selected: null });
+
+  renderSearchResults = () => {
+    const { results, selected } = this.state;
+    const isItemSelected = Object.keys(selected || {}).length > 0;
+
+    return isItemSelected ? (
+      <SelectedInfo selected={selected} onButtonPress={this.onButtonPress} />
+    ) : (
+      <SearchResults results={results || []} onPress={this.onResultPress} />
+    );
   };
 
   render() {
-    const { results, selected, searchBy } = this.state;
-    console.log(results);
+    const { searchBy } = this.state;
 
-    return React.cloneElement(
-      <Fragment>
-        <StatusBar barStyle="dark-content" backgroundColor="lime" />
-        <SafeAreaView style={styles.safeArea}>
-          <View style={styles.view}>
-            <Text style={styles.title}>Best Git Repo searcher</Text>
-          </View>
-          <Text> Search some repositories</Text>
-          <TextInput
-            style={styles.repositoriesInput}
-            onChangeText={this.onChangeText}
-          />
-          <Picker
-            selectedValue={searchBy || "repositories"}
-            style={styles.picker}
-            onValueChange={this.onPickerValueChange}
-          >
-            <Picker.Item
-              color="black"
-              label="repositories"
-              value="repositories"
-            />
-            <Picker.Item color="black" label="users" value="users" />
-            <Picker.Item color="black" label="issues" value="issues" />
-          </Picker>
-          {Object.keys(selected || {}).length > 0 ? (
-            <View style={styles.infoBlock}>
-              <Text>Details</Text>
-              <Text>Score : {selected.score}</Text>
-              <Text>
-                Forks? : {selected.fork && selected.fork ? "true" : "false"}
-              </Text>
-              <Text>Full Name : {selected.full_name}</Text>
-              <TouchableOpacity
-                onPress={this.onButtonPress}
-                style={styles.button}
-              >
-                <Text>Hide</Text>
-              </TouchableOpacity>
-            </View>
-          ) : (
-            <ScrollView
-              contentInsetAdjustmentBehavior="automatic"
-              style={styles.scrollView}
-            >
-              {(results || []).map(item => (
-                <View style={styles.result}>
-                  <Text>{item.name}</Text>
-                  <TouchableOpacity
-                    onPress={() => {
-                      this.setState({ selected: item });
-                      this.forceUpdate();
-                    }}
-                  >
-                    <Text style={styles.itemUrl}>{item.url}</Text>
-                  </TouchableOpacity>
-                </View>
-              ))}
-            </ScrollView>
-          )}
-        </SafeAreaView>
-      </Fragment>
+    return (
+      <View style={styles.container}>
+        <Header />
+        <SearchBlock onChangeText={this.onChangeText} />
+        <SearchTypePicker
+          searchBy={searchBy}
+          onPickerValueChange={this.onPickerValueChange}
+        />
+        {this.renderSearchResults()}
+      </View>
     );
   }
 }
 
 const styles = StyleSheet.create({
-  scrollView: {
-    backgroundColor: "#fff"
-  },
-  itemUrl: {
-    textDecorationLine: "underline",
-    color: "blue"
-  },
-  result: {
-    backgroundColor: "aquamarine",
-    borderBottomColor: "black",
-    borderBottomWidth: 1
-  },
-  safeArea: {
+  container: {
     flex: 1,
-    backgroundColor: "lime"
+    paddingTop: 50,
+    backgroundColor: colors.orange,
   },
-  view: {
-    justifyContent: "center",
-    alignItems: "center",
-    backgroundColor: "lime"
-  },
-  picker: {
-    height: 150,
-    width: 100
-  },
-  title: {
-    fontWeight: "bold",
-    fontSize: 35
-  },
-  button: {
-    paddingTop: 50
-  },
-  input: {
-    borderColor: "black",
-    borderWidth: 1
-  },
-  repositoriesInput: {
-    borderColor: "black",
-    borderWidth: 1
-  },
-  infoBlock: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center"
-  }
 });
 
 export default App;
